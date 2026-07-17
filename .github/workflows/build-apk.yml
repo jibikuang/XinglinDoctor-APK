@@ -33,14 +33,40 @@ jobs:
       - name: Build Release APK (unsigned)
         run: ./gradlew assembleRelease
 
+      - name: Generate signing keystore
+        run: |
+          keytool -genkey -v \
+            -keystore release.keystore \
+            -alias xinglin \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass xinglin123 \
+            -keypass xinglin123 \
+            -dname "CN=Xinglin Doctor, OU=Xinglin, O=Xinglin, L=Beijing, ST=Beijing, C=CN"
+
+      - name: Sign Release APK
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore release.keystore \
+            -storepass xinglin123 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            xinglin
+
+      - name: Align Release APK
+        run: |
+          ${ANDROID_SDK_ROOT}/build-tools/34.0.0/zipalign -v 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/app-release-signed.apk
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: XinglinDoctor-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload Release APK (unsigned)
+      - name: Upload Signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: XinglinDoctor-release-unsigned
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          name: XinglinDoctor-release-signed
+          path: app/build/outputs/apk/release/app-release-signed.apk
